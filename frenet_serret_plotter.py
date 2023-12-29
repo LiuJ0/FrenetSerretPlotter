@@ -6,7 +6,29 @@ from plot3d import *
 import numpy as np
 from latex2sympy2 import latex2sympy
 import argparse
+import codecs
+import sys
 
+
+def get_viewing_angle(key):
+    match key:
+        case 'XY':
+            return 90, -90, 0
+        case 'XZ':
+            return 0, -90, 0
+        case 'YZ':
+            return 0, 0, 0
+        case '-XZ':
+            return 0, 90, 0
+        case '-YZ':
+            return 0, 180, 0
+        case '-XY':
+            return -90, 90, 0
+        case _:
+            return 30, 45, 15
+
+def unescaped_str(s):
+    return str(s).encode('utf-8').decode('unicode_escape').replace('-', '-1*')
 
 def get_arrow(curve, V, num):
     return curve[0, num], curve[1, num], curve[2, num], V[0, num], V[1, num], V[2, num]
@@ -24,8 +46,8 @@ def update(num, curve, curve_plot, T, N, B, curvature, torsion):
     T_plot = ax.quiver(*get_arrow(curve, T, num), color='r', label='Tangent')
     N_plot = ax.quiver(*get_arrow(curve, N, num), color='g', label='Normal')
     B_plot = ax.quiver(*get_arrow(curve, B, num), color='b', label='Binormal')
-    ax.text(0, 0, 0, f"Curvature: {curvature[0, num]}\nTorsion: {torsion[0, num]}")
-    return curve_plot, T_plot, N_plot, B_plot
+    curvature_label.set_text(f"{curvature[num]}\n{torsion[num]}")
+    return curve_plot, T_plot, N_plot, B_plot, curvature_label
 
 
 """start = 0
@@ -44,24 +66,35 @@ save_file = 'output/helix.gif'
 
 
 if __name__ == '__main__':
+    for i, arg in enumerate(sys.argv):
+        if (arg[0] == '-') and arg[1].isdigit(): sys.argv[i] = ' ' + arg
     parser = argparse.ArgumentParser()
-    parser.add_argument('--x', type=str, default=r'\cos{t}')
-    parser.add_argument('--y', type=str, default=r'\sin{t}')
-    parser.add_argument('--z', type=str, default=r't')
-    parser.add_argument('--start', type=float, default=0)
-    parser.add_argument('--end', type=float, default=2*np.pi)
-    parser.add_argument('--num', type=int, default=100)
-    parser.add_argument('--fps', type=int, default=15)
-    parser.add_argument('--save', type=str, default='output/helix.gif')
+    parser.add_argument('-x', '--x', type=str, default=r'\cos{t}', help="The x component of the parametric curve.")
+    parser.add_argument('-y', '--y', type=str, default=r'\sin{t}', help="The y component of the parametric curve.")
+    parser.add_argument('-z', '--z', type=str, default=r't', help="The z component of the parametric curve.")
+    parser.add_argument('-s', '--start', type=float, default=0, help="When the curve starts.")
+    parser.add_argument('-e', '--end', type=float, default=2*np.pi, help="When the curve ends.")
+    parser.add_argument('-n', '--num', type=int, default=100, help="The number of points to plot. If your curve looks "
+                                                                   "jagged, increase this number.")
+    parser.add_argument('-f', '--fps', type=int, default=15, help="The number of frames per second. Change this to "
+                                                                  "slow down or speed up the animation.")
+    parser.add_argument('-o', '--output', type=str, default='output/helix.gif', help="The output file name.")
+    parser.add_argument('-a', '--angle', type=str, default=None, help="The viewing angle. Options are XY, XZ, YZ, "
+                                                                      "-XZ, -YZ, -XY, or a bird's eye view (default).")
     t = Symbol('t')
     args = parser.parse_args()
-    x = ParametricCurve(latex2sympy(args.x), latex2sympy(args.y), latex2sympy(args.z))
-    data = np.linspace(args.start, args.end, args.num)
+    args = parser.parse_args(['--x', '\cos{t} + 2\cos{2t}', '--y', '\sin{t} - 2\sin{2t}', '--z', ' -\sin{3t}', '--output', 'output/helix.gif'])
+    print(args)
+    x = ParametricCurve(latex2sympy(unescaped_str(args.x)), latex2sympy(unescaped_str(args.y)), latex2sympy(unescaped_str(args.z)))
+    data = np.linspace(latex2sympy(unescaped_str(args.start)).evalf(), latex2sympy(unescaped_str(args.end)).evalf(), args.num)
     curve, T, N, B = make_curve(data, t, x)
     curvature, torsion = calculate_curvatures(t, x, data)
     x_scale, y_scale, z_scale = calculate_scale_factor(curve)
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
+    x_min, x_max, y_min, y_max, z_min, z_max = get_bounds(curve)
+    base_label = plt.gcf().text(0.05, 0.90, "Curvature: \nTorsion: ")
+    curvature_label = plt.gcf().text(0.175, 0.90, f"{curvature[0]}\n{torsion[0]}", font='monospace')
     set_bounds(ax, curve)
 
     curve_plot = ax.plot([], [], [], lw=2)[0]
@@ -69,7 +102,9 @@ if __name__ == '__main__':
     N_plot = ax.quiver(*get_arrow(curve, N, 0), color='g', label='Normal')
     B_plot = ax.quiver(*get_arrow(curve, B, 0), color='b', label='Binormal')
 
+    if args.angle:
+        ax.view_init(*get_viewing_angle(args.angle))
     ani = animation.FuncAnimation(
         fig, update, args.num, fargs=(curve, curve_plot, T, N, B, curvature, torsion), interval=1)
 
-    ani.save('output/helix.gif', writer='Pillow', fps=args.fps)
+    ani.save(args.output, writer='Pillow', fps=args.fps)
