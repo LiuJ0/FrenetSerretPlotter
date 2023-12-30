@@ -85,4 +85,4 @@ $$\textbf{T} = \frac{\textbf{x}'}{|\textbf{x}'|} $$
 $$\textbf{N} = \frac{\textbf{T}'}{|\textbf{T}'|} $$
 $$\textbf{B} = \textbf{T} \times \textbf{N} $$
 The computation of the normal vector is particularly difficult because it requires the derivative of the tangent vector, which can become complicated. Therefore, an alternative formula is used:
-$$\textbf{N} = \frac{1}{\|\textbf{x}'' - (\textbf{x}'' \cdot \textbf{T}) \textbf{T}\|}\textbf{x}'' - (\textbf{x}'' \cdot \textbf{T}) \textbf{T} $$
+$$\textbf{N} = \frac{\textbf{x}'' - (\textbf{x}'' \cdot \textbf{T}) \textbf{T} }{\|\textbf{x}'' - (\textbf{x}'' \cdot \textbf{T}) \textbf{T}\|}$$
