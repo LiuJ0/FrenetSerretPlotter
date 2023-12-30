@@ -98,7 +98,10 @@ def calculate_curvatures(t, x, data):
     # curvature_diff = [""] + ["(increasing)" if (x >= 0) else "(decreasing)" for x in np.diff(curvature)]
     torsion = (xd.cross(xdd)).dot(xddd) / (xd.norm() ** 6 * curvature ** 2)
     # torsion_diff = [""] + ["(increasing)" if (x >= 0) else "(decreasing)" for x in np.diff(torsion)]
-    return curvature.round(4), torsion.round(4)
+    # Resize curvature as a one-dimensional array
+    curvature = np.squeeze(curvature)
+    torsion = np.squeeze(torsion)
+    return curvature.astype(float).round(4), torsion.astype(float).round(4)
 
 
 def normal(T, N, B):
